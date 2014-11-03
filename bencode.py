@@ -1,6 +1,9 @@
 '''
 The <data> parameter in the functions below are
 bencoded strings with type <str> in Python.
+
+The bencode function is Tom's. See:
+https://github.com/thomasballinger/bittorrent/blob/master/bittorrent/bencode.py
 '''
 
 
@@ -49,12 +52,17 @@ def get_list(data):
         if data[0] == 'e':
             return L, data[1:]
         else:
-            wanted, remainder = bdecode(data)
+            wanted, remainder = _bdecode_helper(data)
             L.append(wanted)
             data = remainder
 
 
 def get_dict(data):
+    '''
+    A valid bencoded dict is in the format d<bencoded_vals>e,
+    where d and e are the delimiters. Only strings may be keys
+    but values can be any bencoded type.
+    '''
     assert data[0] == 'd'
     D = {}
     data = data[1:]
@@ -63,11 +71,28 @@ def get_dict(data):
         if data[0] == 'e':
             return D, data[1:]
         else:
-            wanted, remainder = bdecode(data)
-            D[wanted], data = bdecode(remainder)
+            wanted, remainder = _bdecode_helper(data)
+            D[wanted], data = _bdecode_helper(remainder)
 
 
 def bdecode(string):
+    '''
+    bdecode(string) -> string is a bencoded string of
+    type <str>.
+    Decode bencoded strings. Returns the decoded value
+    in its corresponding Python type.
+    '''
+    wanted, remainder = _bdecode_helper(string)
+    assert remainder == ''
+    return wanted
+
+
+def _bdecode_helper(string):
+    '''
+    _bdecode_helper(string) -> string is a bencoded string of
+    type <str>. 
+    Returns a tuple of the decoded values and a remainder.
+    '''
     first = string[0]
     if first == 'l':
         return get_list(string)
@@ -77,4 +102,24 @@ def bdecode(string):
         return get_int(string)
     if first == 'd':
         return get_dict(string)
-    return bdecode(string[1:])
+    return _bdecode_helper(string[1:])
+
+
+encodings = {
+    dict : lambda x: 'd'+''.join([bencode(str(k))+bencode(v) for k,v in sorted(x.items(), key=lambda kv: kv[0])])+'e',
+    list : lambda x: 'l'+''.join([bencode(el) for el in x])+'e',
+    str :  lambda x: str(len(x))+':'+x,
+    int :  lambda x: 'i'+str(x)+'e'
+}
+
+
+def bencode(string):
+    '''
+    Doesn't reject invalid data structures very well
+    >>> bencode({'e':3})
+    'd1:ei3ee'
+    >>> d = {'a': 1, 'b': [2,3,'asdf'], 'cdef': {'qwerty':4}}
+    >>> bencode(d)
+    'd1:ai1e1:bli2ei3e4:asdfe4:cdefd6:qwertyi4eee'
+    '''
+    return encodings[type(string)](string)

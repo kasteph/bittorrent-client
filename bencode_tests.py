@@ -1,5 +1,5 @@
 import unittest
-from bencode import get_string, get_int, get_list, get_dict, bdecode
+from bencode import get_string, get_int, get_list, get_dict, bdecode, bencode
 
 
 class TestBencode(unittest.TestCase):
@@ -32,3 +32,14 @@ class TestBencode(unittest.TestCase):
         self.assertEqual(get_dict('d3:cow3:moo4:spaml3:foo3:baree'), ({'cow': 'moo', 'spam': ['foo', 'bar']}, ''))
         self.assertEqual(get_dict('de'), ({}, ''))
         self.assertEqual(get_dict('d1:ai1ee'), ({'a': 1}, ''))
+
+    def test_bdecode(self):
+        self.assertEqual(bdecode('4:spam'), 'spam')
+        self.assertEqual(bdecode('i42e'), 42)
+        self.assertEqual(bdecode('l4:spam4:eggsi42ee'), ['spam', 'eggs', 42])
+        self.assertEqual(bdecode('d3:cow3:moo4:spaml3:foo3:baree'), {'cow': 'moo', 'spam': ['foo', 'bar']})
+
+    def test_bencode(self):
+        long_dict = {'a': 1, 'b': [2,3,'asdf'], 'cdef': {'qwerty':4}}
+        self.assertEqual(bencode({'e':3}), 'd1:ei3ee')
+        self.assertEqual(bencode(long_dict), 'd1:ai1e1:bli2ei3e4:asdfe4:cdefd6:qwertyi4eee')
