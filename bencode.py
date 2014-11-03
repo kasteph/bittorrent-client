@@ -19,9 +19,9 @@ def get_string(data):
         assert isinstance(length, int)
     except ValueError:
         raise ValueError('Not a valid bencoded string.')
-    wanted_string = data[1][:length]
+    wanted = data[1][:length]
     remainder = data[1][length:]
-    return wanted_string, remainder
+    return wanted, remainder
 
 
 def get_int(data):
@@ -30,7 +30,9 @@ def get_int(data):
     where x is an integer, and i and e are the delimiters.
     '''
     assert data[0] == 'i'
-    return int(data[1:data.index('e')])
+    wanted = int(data[1:data.index('e')])
+    remainder = data[data.index('e') + 1:]
+    return wanted, remainder
 
 
 def get_list(data):
@@ -40,28 +42,39 @@ def get_list(data):
     type.
     '''
     assert data[0] == 'l'
-    return
+    L = []
+    data = data[1:]
+    while len(data) > 0:
+        assert data != ''
+        if data[0] == 'e':
+            return L, data[1:]
+        else:
+            wanted, remainder = bdecode(data)
+            L.append(wanted)
+            data = remainder
 
 
 def get_dict(data):
-    pass
+    assert data[0] == 'd'
+    D = {}
+    data = data[1:]
+    while len(data) > 0:
+        assert data != ''
+        if data[0] == 'e':
+            return D, data[1:]
+        else:
+            wanted, remainder = bdecode(data)
+            D[wanted], data = bdecode(remainder)
 
 
 def bdecode(string):
     first = string[0]
+    if first == 'l':
+        return get_list(string)
     if first in '0123456789':
-        wanted_string, remainder_string = get_string(string)
-        return wanted_string, remainder_string
+        return get_string(string)
     if first == 'i':
         return get_int(string)
-    if first == 'l':
-        bdecoded_list = []
-        for c in string:
-            print(c)
-            bdecoded_list.append(bdecode(string[1:]))
-    if first == 'e':
-        return bdecoded_list
     if first == 'd':
-        bdecoded_dict = []
-        bdecoded_dict.append(bdecoded_dict)
+        return get_dict(string)
     return bdecode(string[1:])

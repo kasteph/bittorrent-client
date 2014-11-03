@@ -14,10 +14,13 @@ class TestBencode(unittest.TestCase):
         self.assertRaises(ValueError, get_string, 'e3:bar')
 
     def test_get_int(self):
-        self.assertEqual(get_int('i3e'), 3)
-        self.assertEqual(get_int('i-3e'), -3)
-        self.assertEqual(get_int('i04e'), 4)
-        self.assertEqual(get_int('i0e'), 0)
+        self.assertEqual(get_int('i3e'), (3, ''))
+        self.assertEqual(get_int('i-3e'), (-3, ''))
+        self.assertEqual(get_int('i04e'), (4, ''))
+        self.assertEqual(get_int('i0e'), (0, ''))
 
     def test_get_list(self):
-        self.assertEqual(bdecode('l4:spam4:eggse'), ['spam', 'eggs'])
+        self.assertEqual(bdecode('l4:spam4:eggse'), (['spam', 'eggs'], ''))
+
+    def test_get_dict(self):
+        self.assertEqual(bdecode('d3:cow3:moo4:spam4:eggse'), ({'cow': 'moo', 'spam': 'eggs'}, ''))
