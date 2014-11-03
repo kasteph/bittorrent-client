@@ -1,5 +1,5 @@
 import unittest
-from bencode import get_string, get_int, bdecode
+from bencode import get_string, get_int, get_list, get_dict, bdecode
 
 
 class TestBencode(unittest.TestCase):
@@ -20,7 +20,15 @@ class TestBencode(unittest.TestCase):
         self.assertEqual(get_int('i0e'), (0, ''))
 
     def test_get_list(self):
-        self.assertEqual(bdecode('l4:spam4:eggse'), (['spam', 'eggs'], ''))
+        self.assertEqual(get_list('l4:spam4:eggse'), (['spam', 'eggs'], ''))
+        self.assertEqual(get_list('l4:spam4:eggsi42ee'), (['spam', 'eggs', 42], ''))
+        self.assertEqual(get_list('li1ei2ei3ee'), ([1, 2, 3], ''))
+        self.assertEqual(get_list('li1eli2eee'), ([1, [2]], ''))
+        self.assertEqual(get_list('le'), ([], ''))
+        self.assertEqual(get_list('ld3:cow3:moo4:spam4:eggsee'), ([{'cow': 'moo', 'spam': 'eggs'}], ''))
 
     def test_get_dict(self):
-        self.assertEqual(bdecode('d3:cow3:moo4:spam4:eggse'), ({'cow': 'moo', 'spam': 'eggs'}, ''))
+        self.assertEqual(get_dict('d3:cow3:moo4:spam4:eggse'), ({'cow': 'moo', 'spam': 'eggs'}, ''))
+        self.assertEqual(get_dict('d3:cow3:moo4:spaml3:foo3:baree'), ({'cow': 'moo', 'spam': ['foo', 'bar']}, ''))
+        self.assertEqual(get_dict('de'), ({}, ''))
+        self.assertEqual(get_dict('d1:ai1ee'), ({'a': 1}, ''))
