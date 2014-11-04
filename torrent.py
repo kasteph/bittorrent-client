@@ -24,31 +24,44 @@ class Torrent(object):
         self.bencoded_info = bencode.bencode(self._info)
 
 
+class Tracker(object):
+    def __init__(self, torrent):
+        self.torrent = torrent
+        self.peer_id = '-HS455BROADWAY24816-'
+
+    def _get_tracker_info(self):  # aka connect to tracker
+        payload = self._build_payload()
+        response = requests.get(self.torrent.announce_url, params=payload)
+        return bencode.bdecode(response.content)
+
+    def _build_payload(self):
+        self.info_hash = hashlib.sha1(self.torrent.bencoded_info)
+        self.left = self.torrent.length
+        payload = {
+            'info_hash': self.info_hash.digest(),
+            'peer_id': self.peer_id,
+            'left': self.left
+        }
+        return payload
+
+    def get_peers(self):
+        peer_data = self._get_tracker_info()['peers']
+        byte_offset = 0
+        peers = []
+        if type(peer_data) == str:
+            while byte_offset < len(peer_data):
+                peer = struct.unpack_from('BBBBH', peer_data, byte_offset)
+                peers.append(peer)
+                byte_offset += 6
+        peers = [('.'.join(repr(i) for i in peer[0:4]), peer[4]) for peer in peers]
+        return peers
+
+
 def main():
     torrent = Torrent()
-    print(torrent.announce_url)
-    # talk to trackers!
-    info_hash = hashlib.sha1(torrent.bencoded_info)
-    peer_id = '-HS455BROADWAY24816-'
-    left = torrent.length
-    payload = {
-        'info_hash': info_hash.digest(),
-        'peer_id': peer_id,
-        'left': left
-    }
-    response = requests.get(torrent.announce_url, params=payload)
-    response_dict = bencode.bdecode(response.content)
-    print(response_dict)
-    peers = response_dict['peers']
-    assert type(peers) == str
-    bytes_remaining = 0
-    peers_list = []
-    while bytes_remaining < len(peers):
-        peers_list.append(struct.unpack_from('BBBBH', peers, bytes_remaining))
-        bytes_remaining += 6
-    print(peers_list)
-    peers_list = [('.'.join(repr(i) for i in peer[0:4]), peer[4]) for peer in peers_list]
-    print(peers_list)
+    tracker = Tracker(torrent)
+    print tracker.get_peers()
+
 
 if __name__ == '__main__':
     main()
