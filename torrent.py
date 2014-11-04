@@ -1,5 +1,6 @@
 import bencode
 import hashlib
+import struct
 import requests
 
 
@@ -36,9 +37,18 @@ def main():
         'left': left
     }
     response = requests.get(torrent.announce_url, params=payload)
-    print(info_hash.digest())
-    print(response, response.content)
-
+    response_dict = bencode.bdecode(response.content)
+    print(response_dict)
+    peers = response_dict['peers']
+    assert type(peers) == str
+    bytes_remaining = 0
+    peers_list = []
+    while bytes_remaining < len(peers):
+        peers_list.append(struct.unpack_from('BBBBH', peers, bytes_remaining))
+        bytes_remaining += 6
+    print(peers_list)
+    peers_list = [('.'.join(repr(i) for i in peer[0:4]), peer[4]) for peer in peers_list]
+    print(peers_list)
 
 if __name__ == '__main__':
     main()
