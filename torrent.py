@@ -17,10 +17,8 @@ class Torrent(object):
 
     def _get_torrent_info(self):
         self._torrent_dict = bencode.bdecode(open(self.torrent_file).read())
-        print self._torrent_dict.keys()
         self._info = self._torrent_dict['info']
         self.announce_url = self._torrent_dict['announce']
-        print self.announce_url
         self.length = self._info['length']
         self.piece_length = self._info['piece length']
         self.name = self._info['name']
@@ -59,27 +57,38 @@ class Tracker(object):
         peers = [('.'.join(repr(i) for i in peer[0:4]), peer[4]) for peer in peers]
         return peers
 
+    @property
+    def info_hash_peer_id(self):
+        return (self.info_hash, self.peer_id,)
+
+
+class Peer(object):
+    '''Represents each peer that I'm connecting to.'''
+
+    def __init__(self, peer, info_hash_peer_id):
+        self.peer = peer
+        pstr = 'BitTorrent protocol'
+        pstrlen = len(pstr)
+        reserved = '\x00' * 8
+        info_hash, peer_id = info_hash_peer_id
+        self.HANDSHAKE_MESSAGE = struct.pack('B', pstrlen) + \
+            pstr + reserved + info_hash + peer_id
+
+    def handshake(self):
+        S = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        S.connect(self.peer)
+        S.send(self.HANDSHAKE_MESSAGE)
+        data = S.recv(1024)
+        S.close()
+        return data
+
 
 def main():
     torrent = Torrent('tom.torrent')
     tracker = Tracker(torrent)
-    print tracker.get_peers()[1]
-    my_peer = tracker.get_peers()[1]
-    # CONNECT TO PEER
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(my_peer)
-    pstr = 'BitTorrent protocol'
-    pstrlen = len(pstr)
-    res = '\x00' * 8
-    info_hash = tracker.info_hash
-    peer_id = tracker.peer_id
-    MESSAGE = struct.pack('B', pstrlen)+pstr+res+info_hash+peer_id
-    s.send(MESSAGE)
-    data = s.recv(1024)
-    s.close()
-
-    print data
-
+    for peer in tracker.get_peers()[1:]:
+        active_peer = Peer(peer, tracker.info_hash_peer_id)
+        print(active_peer)
 
 if __name__ == '__main__':
     main()
