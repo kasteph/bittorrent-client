@@ -86,9 +86,10 @@ class Peer(object):
 def main():
     torrent = Torrent('tom.torrent')
     tracker = Tracker(torrent)
-    for peer in tracker.get_peers()[1:]:
+    peers = tracker.get_peers()[1:] # 0-th element is my IP and port 0
+    for peer in peers:
         active_peer = Peer(peer, tracker.info_hash_peer_id)
-        print(active_peer)
+        print(active_peer.handshake())
 
 if __name__ == '__main__':
     main()
