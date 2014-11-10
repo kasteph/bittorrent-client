@@ -67,6 +67,7 @@ class Peer(object):
 
     def __init__(self, peer, info_hash_peer_id):
         self.peer = peer
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         pstr = 'BitTorrent protocol'
         pstrlen = len(pstr)
         reserved = '\x00' * 8
@@ -74,21 +75,24 @@ class Peer(object):
         self.HANDSHAKE_MESSAGE = struct.pack('B', pstrlen) + \
             pstr + reserved + info_hash + peer_id
 
+    def connect(self):
+        self.socket.connect(self.peer)
+
     def handshake(self):
-        S = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        S.connect(self.peer)
-        S.send(self.HANDSHAKE_MESSAGE)
-        data = S.recv(1024)
-        S.close()
+        self.socket.send(self.HANDSHAKE_MESSAGE)
+        data = self.socket.recv(1024)
+        self.socket.close()
         return data
 
 
 def main():
     torrent = Torrent('tom.torrent')
     tracker = Tracker(torrent)
-    peers = tracker.get_peers()[1:] # 0-th element is my IP and port 0
+    peers = tracker.get_peers()[1:]  # 0-th element is my IP and port 0
+    print peers
     for peer in peers:
         active_peer = Peer(peer, tracker.info_hash_peer_id)
+        active_peer.connect()
         print(active_peer.handshake())
 
 if __name__ == '__main__':
