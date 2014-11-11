@@ -91,13 +91,10 @@ class Peer(object):
 
     def handshake(self):
         self.socket.send(self.HANDSHAKE_MESSAGE)
-        data = self.socket.recv(1024)
-        more_data = self.socket.recv(1024)
-        self.socket.close()
-        return data, more_data
 
-    def get_new_message(self):
-        self.socket.connect()
+    def get_data(self):
+        return self.socket.recv(1024)
+
 
 def main():
     torrent = Torrent('tom.torrent')
@@ -105,7 +102,15 @@ def main():
     peer = tracker.get_peers()[1]  # 0-th element is my IP and port 0
     active_peer = Peer(peer, tracker.info_hash_peer_id)
     active_peer.connect()
-    print(active_peer.handshake())
+    active_peer.handshake()
+    data = ''
+    while True:
+        message = active_peer.get_data()
+        if not message:
+            break
+        data += message
+        print repr(data)
+
 
 if __name__ == '__main__':
     main()
