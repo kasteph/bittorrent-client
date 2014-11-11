@@ -6,12 +6,11 @@ import requests
 
 
 class Torrent(object):
-    '''
-    Torrent meta-info. Not the actual data object
-    to be downloaded itself.
-    '''
-
     def __init__(self, torrent_file='tom.torrent'):
+        '''
+        Torrent meta-info. Not the actual data object
+        to be downloaded itself.
+        '''
         self.torrent_file = torrent_file
         self._get_torrent_info()
 
@@ -27,6 +26,10 @@ class Torrent(object):
 
 class Tracker(object):
     def __init__(self, torrent):
+        '''
+        Tracker(torrent) -> <torrent> is a Torrent object.
+        Contains tracker information, and gets peers.
+        '''
         self.torrent = torrent
         self.peer_id = '-HS455BROADWAY24816-'
 
@@ -46,6 +49,9 @@ class Tracker(object):
         return payload
 
     def get_peers(self):
+        '''
+        Get the list of peers (a tuple of IP and port) in a swarm.
+        '''
         peer_data = self._get_tracker_info()['peers']
         byte_offset = 0
         peers = []
@@ -63,9 +69,14 @@ class Tracker(object):
 
 
 class Peer(object):
-    '''Represents each peer that I'm connecting to.'''
-
     def __init__(self, peer, info_hash_peer_id):
+        '''
+        Peer(peer, info_hash_peer_id) -> <peer> is a tuple
+        of (IP address, port). <info_hash_peer_id> is a tuple of
+        (info_hash, peer_id) and can be obtained from the Torrent
+        object.
+
+        Represents each peer that I'm connecting to.'''
         self.peer = peer
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         pstr = 'BitTorrent protocol'
@@ -81,19 +92,20 @@ class Peer(object):
     def handshake(self):
         self.socket.send(self.HANDSHAKE_MESSAGE)
         data = self.socket.recv(1024)
+        more_data = self.socket.recv(1024)
         self.socket.close()
-        return data
+        return data, more_data
 
+    def get_new_message(self):
+        self.socket.connect()
 
 def main():
     torrent = Torrent('tom.torrent')
     tracker = Tracker(torrent)
-    peers = tracker.get_peers()[1:]  # 0-th element is my IP and port 0
-    print peers
-    for peer in peers:
-        active_peer = Peer(peer, tracker.info_hash_peer_id)
-        active_peer.connect()
-        print(active_peer.handshake())
+    peer = tracker.get_peers()[1]  # 0-th element is my IP and port 0
+    active_peer = Peer(peer, tracker.info_hash_peer_id)
+    active_peer.connect()
+    print(active_peer.handshake())
 
 if __name__ == '__main__':
     main()
